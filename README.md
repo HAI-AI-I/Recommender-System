@@ -60,4 +60,4 @@ D:\learn_ai\project\Recommender-System\
 * [x] **Giai đoạn 1:** Chuẩn bị & Chế biến dữ liệu (Feature Engineering) - *Hoàn tất*.
 * [x] **Giai đoạn 2:** Lọc nhanh ứng viên (Candidate Retrieval via Collaborative Filtering - Top 300) - *Hoàn tất*.
 * [x] **Giai đoạn 3:** Chấm điểm & Xếp hạng chi tiết (Scoring & Re-ranking via LightGBM) - *Hoàn tất*.
-* [ ] **Giai đoạn 4:** Demo gợi ý phim End-to-End & Giao diện tương tác người dùng.
+* [x] **Giai đoạn 4:** Demo gợi ý phim End-to-End & Giao diện tương tác người dùng - *Hoàn tất*.
