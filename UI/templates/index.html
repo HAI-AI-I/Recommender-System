@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141414">
+  <meta name="description" content="Gợi ý phim Hybrid AI, so sánh thuật toán và đánh giá trên dữ liệu MovieLens 32M.">
+  <title>CineMatch — Hệ Thống Gợi Ý Phim Hybrid AI (MovieLens 32M)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23e50914'/%3E%3Cpath d='m16 11 14 9-14 9z' fill='%23ffffff'/%3E%3C/svg%3E">
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='analysis.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Đến nội dung chính</a>
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5zM20 2v4m-2-2h4"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.5 5.5a5 5 0 0 0-7 0L12 7l-1.5-1.5a5 5 0 0 0-7 7L12 21l8.5-8.5a5 5 0 0 0 0-7z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 6h3l12 12h3M3 18h3L18 6h3m-4-4 4 4-4 4m0 4 4 4-4 4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4m-4 6h4m10-6h4m-4 6h4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h17M9 16v-4M14 16V8M19 16V5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13.5A9 9 0 0 1 10.5 3.5a9 9 0 1 0 10 10z"/></symbol>
+  </svg>
+
+  <aside class="sidebar">
+    <a class="brand" href="#explore" aria-label="CineMatch, trang chủ"><span class="brand-mark"><svg><use href="#i-play"/></svg></span>Cine<span>Match</span><span class="brand-dot">.</span></a>
+    <div class="sidebar-label">Không gian của bạn</div>
+    <nav class="navigation" aria-label="Điều hướng chính">
+      <a href="#explore" class="nav-link active" data-view="explore"><svg aria-hidden="true"><use href="#i-home"/></svg>Trang chủ</a>
+      <a href="#for-you" class="nav-link" data-view="for-you"><svg><use href="#i-spark"/></svg>Dành cho bạn</a>
+      <a href="#comparison" class="nav-link" data-view="comparison" aria-label="So sánh và đánh giá mô hình"><svg><use href="#i-chart"/></svg>So sánh</a>
+      <a href="#saved" class="nav-link" data-view="saved"><svg><use href="#i-bookmark"/></svg>Phim đã lưu <span id="saved-count" class="nav-count">0</span></a>
+    </nav>
+    <div class="sidebar-note"><span class="note-icon"><svg><use href="#i-film"/></svg></span><p>Xem và lưu phim</p><span>Lưu phim để xem lại danh sách khi cần.</span><a href="#saved">Xem phim đã lưu</a></div>
+    <div class="sidebar-bottom"><span class="avatar"><svg aria-hidden="true"><use href="#i-heart"/></svg></span><div><strong>Sở thích của bạn</strong><span>Chọn phim để nhận gợi ý</span></div></div>
+  </aside>
+
+  <main class="main" id="main-content" tabindex="-1">
+    <header class="topbar">
+      <div class="header-title"><a class="mobile-brand" href="#explore">CineMatch<span>.</span></a><div class="topbar-caption">Hệ Thống Gợi Ý Phim Hybrid AI <span>(MovieLens 32M)</span></div><div class="view-indicator"><span>Đang xem:</span><strong id="current-view-label">Trang chủ</strong></div></div>
+      <div class="topbar-right">
+        <a class="dataset-badge" href="#catalog"><svg aria-hidden="true"><use href="#i-film"/></svg>Thư viện phim</a>
+        <span class="header-divider"></span>
+        <a class="header-saved" href="#saved" aria-label="Mở phim đã lưu"><svg aria-hidden="true"><use href="#i-bookmark"/></svg></a>
+        <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-label="Chế độ tối" aria-checked="true" title="Chuyển sang chế độ sáng">
+          <span class="theme-option theme-light" aria-hidden="true"><svg><use href="#i-sun"/></svg>Sáng</span>
+          <span class="theme-option theme-dark" aria-hidden="true"><svg><use href="#i-moon"/></svg>Tối</span>
+        </button>
+      </div>
+    </header>
+    <div id="global-error" class="notice error" role="alert" hidden></div>
+    <div id="explore-view" class="view-panel" data-view-panel="explore">
+      <section id="explore" class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy"><div class="eyebrow">Hệ thống gợi ý phim</div><h1 id="hero-title">Gợi ý phim<br>theo sở thích của bạn.</h1><p>Chọn phim yêu thích hoặc dùng lịch sử đánh giá để nhận danh sách gợi ý.</p><div class="hero-actions"><a class="primary-button hero-button" href="#for-you"><svg aria-hidden="true"><use href="#i-spark"/></svg>Nhận gợi ý</a><a class="hero-secondary" href="#catalog">Danh sách phim</a></div><div class="hero-proof"><span class="mini-film"><svg aria-hidden="true"><use href="#i-film"/></svg></span><div><strong id="movie-stat">Đang tải số lượng phim</strong><span>Nguồn dữ liệu: MovieLens 32M</span></div></div></div>
+        <div class="hero-art" aria-hidden="true">
+          <span class="art-orbit orbit-one"></span><span class="art-orbit orbit-two"></span><div class="art-caption">MovieLens 32M</div>
+          <div class="art-poster art-poster-left"><span class="hero-poster-fallback"><svg><use href="#i-film"/></svg><strong>Interstellar</strong><span>Chưa có ảnh</span></span><img class="poster-image" src="/api/movies/109487/poster" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer"></div>
+          <div class="art-poster art-poster-main"><span class="hero-poster-fallback"><svg><use href="#i-film"/></svg><strong>Inception</strong><span>Chưa có ảnh</span></span><img class="poster-image" src="/api/movies/79132/poster" alt="" loading="eager" decoding="async" fetchpriority="high" referrerpolicy="no-referrer"></div>
+          <div class="art-poster art-poster-right"><span class="hero-poster-fallback"><svg><use href="#i-film"/></svg><strong>The Matrix</strong><span>Chưa có ảnh</span></span><img class="poster-image" src="/api/movies/2571/poster" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer"></div>
+          <div class="art-sticker"><svg><use href="#i-spark"/></svg>CF + LightGBM</div>
+        </div>
+      </section>
+
+      <section id="catalog" class="catalog-section" aria-labelledby="catalog-title">
+        <div class="section-heading catalog-heading"><div><h2 id="catalog-title">Danh sách phim</h2><p class="section-description">Tìm theo tên hoặc lọc thể loại. Nhấn trái tim để chọn phim yêu thích.</p></div><label class="catalog-search" for="catalog-search"><svg aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Tìm kiếm trong danh sách phim</span><input id="catalog-search" type="search" placeholder="Tìm tên phim…" maxlength="150" autocomplete="off" aria-controls="catalog-grid"></label></div>
+        <div id="genre-filters" class="genre-filters" aria-label="Lọc phim theo thể loại"><button type="button" class="genre-chip active" data-genre="" aria-pressed="true">Tất cả</button><button type="button" class="genre-chip" data-genre="Action" aria-pressed="false">Hành động</button><button type="button" class="genre-chip" data-genre="Sci-Fi" aria-pressed="false">Khoa học viễn tưởng</button><button type="button" class="genre-chip" data-genre="Drama" aria-pressed="false">Tâm lý</button><button type="button" class="genre-chip" data-genre="Comedy" aria-pressed="false">Hài hước</button><button type="button" class="genre-chip" data-genre="Animation" aria-pressed="false">Hoạt hình</button></div>
+        <div class="catalog-meta"><p id="catalog-summary">Đang mở kho phim…</p><span>Ưu tiên phim được đánh giá nhiều</span></div>
+        <div id="catalog-grid" class="movie-grid" aria-live="polite" aria-busy="true"><div class="loading-message">Đang mở kho phim của bạn…</div></div>
+        <div class="catalog-pagination"><p id="catalog-status" class="input-hint" role="status"></p><button id="catalog-load-more" class="secondary-button" type="button" aria-controls="catalog-grid" hidden>Xem thêm phim</button></div>
+      </section>
+
+    </div>
+
+    <div id="for-you-view" class="view-panel" data-view-panel="for-you" hidden>
+      <section id="for-you" class="personalization" aria-labelledby="personal-title">
+        <div class="section-heading"><div><h2 id="personal-title">Gợi ý phim cho bạn</h2><p class="section-description">Chọn phim yêu thích hoặc nhập ID người dùng.</p></div></div>
+        <div class="personal-panel">
+          <div class="mode-tabs" role="tablist" aria-label="Cách nhận gợi ý"><button class="mode-tab active" id="new-mode" role="tab" aria-selected="true" aria-controls="new-panel" data-mode="new"><svg aria-hidden="true"><use href="#i-heart"/></svg>Chọn phim yêu thích</button><button class="mode-tab" id="existing-mode" role="tab" aria-selected="false" aria-controls="existing-panel" data-mode="existing"><svg aria-hidden="true"><use href="#i-film"/></svg>Dùng lịch sử đánh giá</button></div>
+          <form id="recommend-form">
+            <div id="new-panel" role="tabpanel" aria-labelledby="new-mode"><label for="movie-search" class="input-label">Chọn phim bạn thích</label><div class="search-wrapper"><svg aria-hidden="true"><use href="#i-search"/></svg><input id="movie-search" type="search" placeholder="Tìm tên phim, ví dụ: Inception, The Matrix…" maxlength="150" autocomplete="off" aria-controls="search-results" aria-expanded="false" aria-describedby="selection-hint"><div id="search-results" class="search-results" aria-label="Kết quả tìm kiếm phim" hidden></div></div><div id="selected-movies" class="selected-movies" aria-live="polite" aria-label="Phim đã chọn"></div><div class="starter-row"><span id="starter-label">Phim mẫu:</span><div id="starter-movies" class="starter-movies"></div></div></div>
+            <div id="existing-panel" role="tabpanel" aria-labelledby="existing-mode" hidden><label for="user-id" class="input-label">ID người dùng trong bộ dữ liệu MovieLens</label><div class="user-input-row"><input id="user-id" type="number" min="1" step="1" placeholder="Nhập ID người dùng" aria-describedby="existing-hint"><button type="button" id="random-user" class="secondary-button"><svg aria-hidden="true"><use href="#i-shuffle"/></svg>Chọn ID ngẫu nhiên</button></div><p id="existing-hint" class="input-hint">Dùng lịch sử có sẵn trong MovieLens. Để nhập sở thích riêng, chọn “Chọn phim yêu thích”.</p></div>
+            <div class="form-bottom"><span id="selection-hint" class="input-hint">Chọn ít nhất 1 phim để bắt đầu.</span><div class="form-actions"><label for="top-k">Số phim</label><select id="top-k"><option value="5">5 phim</option><option value="10" selected>10 phim</option><option value="20">20 phim</option></select><button id="recommend-button" class="primary-button" type="submit" disabled><svg><use href="#i-spark"/></svg><span>Nhận gợi ý</span></button></div></div>
+            <div id="form-error" class="notice error" role="alert" hidden></div>
+          </form>
+          <div class="recommendation-feedback"><p id="recommendation-status" role="status"></p><button id="view-recommendations" class="secondary-button" type="button" hidden>Xem kết quả gợi ý</button></div>
+        </div>
+      </section>
+
+      <section id="recommendation-section" class="recommendation-section" aria-labelledby="recommendation-title" hidden><div class="section-heading"><div><h2 id="recommendation-title">Kết quả gợi ý</h2><p id="recommendation-context" class="section-description"></p></div><button id="export-button" class="text-button" type="button"><svg aria-hidden="true"><use href="#i-download"/></svg>Tải danh sách</button></div><div id="recommendation-grid" class="movie-grid" aria-live="polite"></div><details id="history-details" class="history-details" hidden><summary>Phim đã được đánh giá cao</summary><div id="history-list"></div></details></section>
+
+    </div>
+
+      <section id="comparison" class="view-panel analysis-section" data-view-panel="comparison" aria-labelledby="comparison-title" hidden>
+        <div class="section-heading"><div><h2 id="comparison-title">So sánh và đánh giá mô hình</h2><p class="section-description">So sánh kết quả của Hybrid, CF và phương pháp phổ biến.</p></div></div>
+        <div class="method-pipeline" aria-label="Quy trình Hybrid AI"><div><svg aria-hidden="true"><use href="#i-heart"/></svg><span>Sở thích & lịch sử<strong>Đầu vào của người dùng</strong></span></div><span class="pipeline-connector" aria-hidden="true"></span><div><svg aria-hidden="true"><use href="#i-film"/></svg><span>Collaborative Filtering<strong>Lọc tối đa 300 ứng viên</strong></span></div><span class="pipeline-connector" aria-hidden="true"></span><div><svg aria-hidden="true"><use href="#i-spark"/></svg><span>LightGBM<strong>Xếp hạng Top K phim</strong></span></div></div>
+        <div class="analysis-panel">
+          <div class="analysis-panel-heading"><div><h3>So sánh danh sách gợi ý</h3><p>Dùng cùng đầu vào đã chọn ở phần gợi ý. Các phương pháp đều loại phim đã xem.</p></div><button id="comparison-export" class="text-button" type="button" hidden><svg aria-hidden="true"><use href="#i-download"/></svg>Tải bảng so sánh</button></div>
+          <form id="compare-form" class="comparison-controls"><p id="compare-context" class="input-hint" role="status">Chọn phim yêu thích hoặc nhập ID người dùng ở phần gợi ý.</p><button id="compare-button" class="primary-button" type="submit"><svg aria-hidden="true"><use href="#i-chart"/></svg>So sánh các phương pháp</button></form>
+          <div id="compare-error" class="notice error" role="alert" hidden></div>
+          <div id="comparison-results" class="comparison-results" aria-live="polite"><div class="analysis-placeholder"><svg aria-hidden="true"><use href="#i-chart"/></svg><p>Chọn đầu vào rồi chạy so sánh để xem Top K phim của từng phương pháp.</p><a href="#for-you">Chọn sở thích hoặc ID người dùng</a></div></div>
+        </div>
+        <div class="analysis-panel evaluation-panel">
+          <div class="analysis-panel-heading"><div><h3>Đánh giá trên tập kiểm tra</h3><p>Các phương pháp được đánh giá trên cùng nhóm người dùng và cùng tập phim yêu thích chưa xem.</p></div><button id="evaluation-export" class="text-button" type="button" hidden><svg aria-hidden="true"><use href="#i-download"/></svg>Tải kết quả đánh giá</button></div>
+          <form id="evaluation-form" class="evaluation-controls"><div><label for="evaluation-users">Số người dùng kiểm tra</label><input id="evaluation-users" type="number" min="1" max="100" step="1" value="20" required aria-describedby="evaluation-status"></div><div><label for="evaluation-k">Đánh giá Top K</label><select id="evaluation-k"><option value="5">Top 5</option><option value="10" selected>Top 10</option><option value="20">Top 20</option></select></div><button id="evaluation-button" class="secondary-button" type="submit"><svg aria-hidden="true"><use href="#i-chart"/></svg>Chạy đánh giá</button></form>
+          <p id="evaluation-status" class="input-hint" role="status">Kết quả được tính khi chạy đánh giá, không dùng số liệu minh họa.</p>
+          <div id="evaluation-error" class="notice error" role="alert" hidden></div>
+          <div id="evaluation-results" aria-live="polite"></div>
+          <details class="metric-guide"><summary>Cách đọc các chỉ số</summary><dl><div><dt>Precision@K</dt><dd>Tỷ lệ phim gợi ý trúng trong K vị trí.</dd></div><div><dt>Recall@K</dt><dd>Tỷ lệ phim yêu thích trong tập kiểm tra được tìm thấy.</dd></div><div><dt>NDCG@K</dt><dd>Chất lượng thứ hạng; phim gợi ý đúng ở vị trí đầu có trọng số cao hơn.</dd></div><div><dt>Hit Rate@K</dt><dd>Tỷ lệ người dùng có ít nhất một phim gợi ý đúng.</dd></div><div><dt>Coverage@K</dt><dd>Tỷ lệ phim trong kho xuất hiện trong các danh sách gợi ý.</dd></div></dl></details>
+        </div>
+      </section>
+
+    <section id="saved" class="view-panel" data-view-panel="saved" aria-labelledby="saved-title" hidden><div class="saved-intro"><h2 id="saved-title">Phim đã lưu</h2><p>Danh sách phim bạn đã lưu trên trình duyệt này.</p></div><div id="saved-grid" class="movie-grid" aria-live="polite"></div></section>
+    <footer><a href="#explore" class="footer-brand">CineMatch<span>.</span></a><span>Gợi ý phim từ dữ liệu MovieLens 32M</span><a class="poster-source" href="https://github.com/Stremio/stremio-official-addons" target="_blank" rel="noopener noreferrer">Ảnh phim: Cinemeta</a><a href="#for-you">Nhận gợi ý</a></footer>
+  </main>
+
+  <dialog id="movie-dialog" aria-labelledby="dialog-title"><button id="close-dialog" class="icon-button dialog-close" aria-label="Đóng thông tin phim"><svg><use href="#i-close"/></svg></button><div id="dialog-content"></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

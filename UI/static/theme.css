@@ -1,0 +1,159 @@
+/* The theme switch stays available in the header at every screen size. */
+.theme-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--text);
+}
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: .875rem;
+  font-weight: 600;
+}
+.theme-option svg { width: 17px; height: 17px; }
+:root[data-theme="dark"] .theme-dark,
+:root[data-theme="light"] .theme-light {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.theme-toggle:hover { border-color: var(--accent-soft); }
+
+/* Light surfaces and readable ink retain the red cinema accent. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f6f6;
+  --sidebar: #fff;
+  --panel: #fff;
+  --field: #fff;
+  --line: #d5d5d5;
+  --muted: #595959;
+  --text: #202020;
+  --accent: #c8101b;
+  --accent-soft: #b80b15;
+  --surface-subtle: #f0f0f0;
+  --surface-hover: #e8e8e8;
+  --border-strong: #8a8a8a;
+  --accent-tint: #fff0f1;
+}
+:root[data-theme="light"] :is(
+  .nav-link, .dataset-badge, .hero-secondary, .eyebrow, .hero-copy > p,
+  .hero-proof strong, .mini-film, .mode-tab, .search-wrapper > svg,
+  .search-result small, .search-message, .starter-chip, .form-actions > label,
+  .catalog-search > svg, .genre-chip, .card-meta, .card-genre, .card-rating > span,
+  .card-like, .loading-message, .empty-state, footer, .poster-source,
+  .dialog-copy p, .dialog-genre, .dialog-status, .method-pipeline span,
+  .analysis-placeholder > svg, .comparison-summary, .comparison-rank,
+  .comparison-film-meta, .comparison-score, .method-time, .evaluation-controls label,
+  .evaluation-protocol, .metric-guide, .metric-guide dt, .metric-guide dd,
+  .topbar-caption span, .view-indicator > span
+) { color: var(--muted); }
+:root[data-theme="light"] :is(
+  h3, .view-indicator strong, .input-label, .card-title, .empty-state strong,
+  .footer-brand, .comparison-film, .evaluation-summary
+) { color: var(--text); }
+:root[data-theme="light"] #recommendation-status { color: var(--text); }
+:root[data-theme="light"] :is(
+  .personal-panel, .search-wrapper input, .user-input-row input, .search-results,
+  .starter-chip, select, .catalog-search, .genre-chip, .history-details,
+  .loading-message, .empty-state, dialog, .analysis-panel, .comparison-controls,
+  .comparison-method, .comparison-method-header, .comparison-item,
+  .evaluation-controls input, .evaluation-table-wrap, .evaluation-table td, .metric-guide
+) { border-color: var(--line); }
+:root[data-theme="light"] :is(
+  .search-results, .catalog-search, dialog, .analysis-panel, .comparison-method,
+  .evaluation-controls input
+) { background: var(--panel); }
+:root[data-theme="light"] :is(
+  .history-details, .icon-button, .recommendation-feedback, .evaluation-table th,
+  .evaluation-table caption, .avatar
+) { background: var(--surface-subtle); color: var(--text); }
+:root[data-theme="light"] :is(.secondary-button, .history-item) {
+  background: var(--surface-hover);
+  border-color: var(--line);
+  color: var(--text);
+}
+:root[data-theme="light"] :is(
+  .nav-link:hover, .secondary-button:hover:not(:disabled), .mode-tab:hover,
+  .search-result:hover, .search-result:focus-visible, .genre-chip:hover, .starter-chip:hover
+) { background: var(--surface-hover); border-color: var(--border-strong); color: var(--text); }
+:root[data-theme="light"] .nav-link.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+:root[data-theme="light"] .nav-link:focus-visible { outline-color: var(--accent); }
+:root[data-theme="light"] h2:focus-visible { outline-color: var(--accent); }
+:root[data-theme="light"] .nav-count { background: var(--surface-hover); color: var(--text); }
+:root[data-theme="light"] .nav-link.active .nav-count { background: #ffffff30; color: #fff; }
+:root[data-theme="light"] .mode-tab.active { color: var(--accent); }
+:root[data-theme="light"] input::placeholder { color: #6b6b6b; }
+:root[data-theme="light"] select {
+  background-color: var(--field);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23595959' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+  color: var(--text);
+}
+:root[data-theme="light"] .evaluation-controls input { color: var(--text); }
+:root[data-theme="light"] :is(.selected-chip, .card-save.is-saved) {
+  background: var(--accent-tint);
+  border-color: #e1a1a6;
+  color: var(--accent);
+}
+:root[data-theme="light"] .selected-chip button { color: var(--accent); }
+:root[data-theme="light"] :is(.selected-chip button:hover, .card-like:hover) { background: #f5dce0; }
+:root[data-theme="light"] .card-like.is-liked { color: var(--accent); }
+:root[data-theme="light"] .card-save {
+  background: #fffffff2;
+  border-color: var(--line);
+  color: var(--text);
+}
+:root[data-theme="light"] .card-save:hover { background: var(--surface-hover); }
+:root[data-theme="light"] .card-rating { color: #805400; }
+:root[data-theme="light"] .match-badge {
+  background: var(--accent-tint);
+  border-color: #e1a1a6;
+  color: var(--accent);
+}
+:root[data-theme="light"] .genre-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+:root[data-theme="light"] :is(.card-title:hover, .comparison-film:hover, .poster-source:hover, .dataset-badge:hover) { color: var(--accent); }
+:root[data-theme="light"] .dataset-badge[aria-current="location"] { color: var(--text); }
+:root[data-theme="light"] .error { background: #fff0eb; border-color: #d9a491; color: #8c2915; }
+:root[data-theme="light"] .movie-poster { border-color: var(--line); }
+:root[data-theme="light"] :is(.movie-poster, .art-poster, .poster-image, .poster-fallback, .hero-poster-fallback) { background: var(--surface-subtle); }
+:root[data-theme="light"] :is(.poster-fallback, .hero-poster-fallback) { color: var(--text); }
+:root[data-theme="light"] .hero-poster-fallback strong { color: var(--text); }
+:root[data-theme="light"] :is(.poster-fallback > svg, .hero-poster-fallback > svg, .poster-fallback > span, .hero-poster-fallback > span, .art-caption) { color: var(--muted); }
+:root[data-theme="light"] .art-sticker { background: var(--panel); border-color: var(--line); color: var(--text); }
+:root[data-theme="light"] :is(.pipeline-connector, .metric-track) { background: var(--line); }
+:root[data-theme="light"] .comparison-method[data-method="hybrid"] { border-color: #d3848a; }
+:root[data-theme="light"] .comparison-method[data-method="hybrid"] :is(.comparison-method-header, .comparison-score) { color: var(--accent); }
+:root[data-theme="light"] .comparison-method[data-method="hybrid"] .comparison-method-header { background: var(--accent-tint); }
+:root[data-theme="light"] .comparison-method-header > p:last-child { color: var(--muted); }
+:root[data-theme="light"] .evaluation-table td { color: var(--text); }
+:root[data-theme="light"] .evaluation-table tbody tr[data-method="hybrid"] { background: var(--accent-tint); }
+:root[data-theme="light"] .metric-fill { background: #777; }
+:root[data-theme="light"] [data-method="cf"] .metric-fill { background: #424242; }
+:root[data-theme="light"] [data-method="hybrid"] .metric-fill { background: var(--accent); }
+:root[data-theme="light"] .toast { background: var(--text); color: #fff; border-color: var(--text); }
+
+@media (max-width: 740px) {
+  .topbar { padding-top: 12px; padding-bottom: 12px; }
+  .topbar-right { flex-direction: column-reverse; align-items: flex-end; gap: 8px; }
+  :root[data-theme="light"] .sidebar { background: #fffffff5; border-color: var(--line); }
+}

@@ -18,6 +18,8 @@ import random
 import pickle
 import zipfile
 import argparse
+import hashlib
+import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -439,7 +441,7 @@ class HybridMovieRecommender:
 
     def search_movies(self, query, limit=5):
         """Tìm kiếm phim trong kho theo từ khóa tựa đề."""
-        mask = self.df_movies['clean_title'].str.contains(query, case=False, na=False)
+        mask = self.df_movies['clean_title'].str.contains(query, case=False, na=False, regex=False)
         cols = ['movieId', 'clean_title', 'release_year', 'genres']
         return self.df_movies[mask][cols].head(limit)
 
@@ -468,6 +470,33 @@ class HybridMovieRecommender:
 
         return cand_df
 
+    def _candidate_ids(self, user_vector, excluded_ids, top_n_candidates):
+        """Chỉ lấy phim chưa xem, kể cả khi kho còn ít hơn 300 phim."""
+        scores = user_vector.dot(self.movie_latent.T)
+        available = np.ones(len(scores), dtype=bool)
+        excluded_indices = [self.movie2idx[m] for m in excluded_ids if m in self.movie2idx]
+        available[excluded_indices] = False
+        indices = np.flatnonzero(available)
+        count = min(top_n_candidates, len(indices))
+        if count <= 0:
+            return []
+        selected = np.argpartition(scores[indices], -count)[-count:]
+        indices = indices[selected]
+        indices = indices[np.argsort(-scores[indices])]
+        return [self.idx2movie[int(index)] for index in indices]
+
+    def _rank_candidates(self, candidate_ids, user_vector, user_avg, user_count, top_k):
+        display_cols = ['movieId', 'clean_title', 'release_year', 'genres',
+                        'predicted_like_prob', 'cf_score', 'movie_avg_rating']
+        if not candidate_ids:
+            return pd.DataFrame(columns=display_cols)
+        candidates = self._build_feature_table(candidate_ids, user_vector, user_avg, user_count)
+        candidates['predicted_like_prob'] = self.lgb_model.predict_proba(candidates[self.feature_cols])[:, 1]
+        ranked = candidates.sort_values('predicted_like_prob', ascending=False).head(top_k)
+        metadata = self.df_movies[['movieId', 'clean_title', 'genres']].drop_duplicates('movieId')
+        result = ranked.merge(metadata, on='movieId', how='left')
+        return result[display_cols].reset_index(drop=True)
+
     def recommend_for_user(self, user_id, top_k=10, top_n_candidates=300):
         """Gợi ý phim cho người dùng đã có trong hệ thống."""
         watched_ids = set()
@@ -494,25 +523,10 @@ class HybridMovieRecommender:
             return self.df_movies[self.df_movies['movieId'].isin(popular_ids)][['movieId', 'clean_title', 'release_year', 'genres']]
 
         # Vòng 1: Lọc Top 300 ứng viên qua CF
-        scores = user_vec.dot(self.movie_latent.T)
-        if len(watched_ids) > 0:
-            watched_idx = [self.movie2idx[m] for m in watched_ids if m in self.movie2idx]
-            scores[watched_idx] = -1e9
-
-        top_idx = np.argpartition(scores, -top_n_candidates)[-top_n_candidates:]
-        sorted_top_idx = top_idx[np.argsort(-scores[top_idx])]
-        candidate_ids = [self.idx2movie[i] for i in sorted_top_idx]
+        candidate_ids = self._candidate_ids(user_vec, watched_ids, top_n_candidates)
 
         # Vòng 2: Xếp hạng lại bằng LightGBM
-        cand_df = self._build_feature_table(candidate_ids, user_vec, user_avg, user_cnt)
-        cand_df['predicted_like_prob'] = self.lgb_model.predict_proba(cand_df[self.feature_cols])[:, 1]
-
-        ranked_df = cand_df.sort_values('predicted_like_prob', ascending=False).head(top_k)
-        meta = self.df_movies[['movieId', 'clean_title', 'genres']].drop_duplicates('movieId')
-        res = ranked_df.merge(meta, on='movieId', how='left')
-
-        display_cols = ['movieId', 'clean_title', 'release_year', 'genres', 'predicted_like_prob', 'cf_score', 'movie_avg_rating']
-        return res[[c for c in display_cols if c in res.columns]].reset_index(drop=True)
+        return self._rank_candidates(candidate_ids, user_vec, user_avg, user_cnt, top_k)
 
     def recommend_for_new_user(self, liked_movie_ids_or_titles, top_k=10, top_n_candidates=300):
         """Giải quyết bài toán Cold-Start cho người dùng mới hoàn toàn dựa vào Instant Vector."""
@@ -532,27 +546,16 @@ class HybridMovieRecommender:
             popular_ids = self.df_movie_stats.nlargest(top_k, 'movie_rating_count')['movieId'].values
             return self.df_movies[self.df_movies['movieId'].isin(popular_ids)][['movieId', 'clean_title', 'release_year', 'genres']]
 
+        valid_movie_ids = list(dict.fromkeys(valid_movie_ids))
         m_indices = [self.movie2idx[m] for m in valid_movie_ids]
         instant_user_vector = np.mean(self.movie_latent[m_indices], axis=0)
 
         # Vòng 1: Lọc 300 ứng viên qua CF
-        scores = instant_user_vector.dot(self.movie_latent.T)
-        scores[m_indices] = -1e9
-
-        top_idx = np.argpartition(scores, -top_n_candidates)[-top_n_candidates:]
-        sorted_top_idx = top_idx[np.argsort(-scores[top_idx])]
-        candidate_ids = [self.idx2movie[i] for i in sorted_top_idx]
+        candidate_ids = self._candidate_ids(instant_user_vector, valid_movie_ids, top_n_candidates)
 
         # Vòng 2: Chấm điểm xác suất qua LightGBM
-        cand_df = self._build_feature_table(candidate_ids, instant_user_vector, self.global_user_avg_rating, self.global_user_log_count)
-        cand_df['predicted_like_prob'] = self.lgb_model.predict_proba(cand_df[self.feature_cols])[:, 1]
-
-        ranked_df = cand_df.sort_values('predicted_like_prob', ascending=False).head(top_k)
-        meta = self.df_movies[['movieId', 'clean_title', 'genres']].drop_duplicates('movieId')
-        res = ranked_df.merge(meta, on='movieId', how='left')
-
-        display_cols = ['movieId', 'clean_title', 'release_year', 'genres', 'predicted_like_prob', 'cf_score', 'movie_avg_rating']
-        return res[[c for c in display_cols if c in res.columns]].reset_index(drop=True)
+        return self._rank_candidates(candidate_ids, instant_user_vector,
+                                     self.global_user_avg_rating, self.global_user_log_count, top_k)
 
 
 # 5. ĐÁNH GIÁ END-TO-END BENCHMARK (VÒNG 1 VS VÒNG 2)
@@ -645,6 +648,47 @@ def save_model_artifacts(data_dir, lgb_model, feature_cols, metrics):
         json.dump(metrics, f, indent=4, ensure_ascii=False)
 
     print(f"Đã lưu thành công các Artifacts của Phase 3 tại {data_dir}:")
+
+
+def save_serving_artifacts(data_dir, recommender, df_train):
+    """Lưu đúng đầu vào suy luận của lần huấn luyện, kèm lịch sử chỉ từ train."""
+    data_dir = Path(data_dir)
+    model_path = data_dir / 'lgbm_ranker.txt'
+    if not model_path.is_file():
+        raise FileNotFoundError('Hãy lưu mô hình trước khi lưu bộ dữ liệu suy luận.')
+    users = df_train['userId'].map(recommender.user2idx)
+    movies = df_train['movieId'].map(recommender.movie2idx)
+    if users.isna().any() or movies.isna().any():
+        raise ValueError('Lịch sử train không khớp bộ ánh xạ CF.')
+    history = csr_matrix(
+        (df_train['rating'].to_numpy(dtype=np.float32),
+         (users.to_numpy(dtype=np.int32), movies.to_numpy(dtype=np.int32))),
+        shape=(len(recommender.user_latent), len(recommender.movie_latent)),
+    )
+    bundle = {
+        'version': 1,
+        'model_sha256': hashlib.sha256(model_path.read_bytes()).hexdigest(),
+        'feature_cols': recommender.feature_cols,
+        'user_latent': recommender.user_latent,
+        'movie_latent': recommender.movie_latent,
+        'user2idx': recommender.user2idx,
+        'movie2idx': recommender.movie2idx,
+        'idx2movie': recommender.idx2movie,
+        'df_movies_final': recommender.df_movies,
+        'df_movie_stats': recommender.df_movie_stats,
+        'df_user_stats': recommender.df_user_stats,
+        'history': history,
+    }
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=data_dir, prefix='serving-', suffix='.tmp', delete=False) as stream:
+            temporary_path = Path(stream.name)
+            pickle.dump(bundle, stream, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(temporary_path, data_dir / 'serving_artifacts.pkl')
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+    print(f"Đã lưu bộ dữ liệu suy luận: {data_dir / 'serving_artifacts.pkl'}")
 
 
 # 7 HÀM MAIN THỰC THI TOÀN BỘ PIPELINE
@@ -746,6 +790,7 @@ def main():
             'benchmark': benchmark_metrics
         }
         save_model_artifacts(data_dir, lgb_model, feature_cols, all_metrics)
+        save_serving_artifacts(data_dir, recommender, df_train)
 
 
 
