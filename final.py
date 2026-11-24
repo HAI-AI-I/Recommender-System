@@ -40,7 +40,7 @@ ZIP_URL = "https://files.grouplens.org/datasets/movielens/ml-32m.zip"
 
 def log_step(title):
     print("\n" + "=" * 80)
-    print(f"🚀 {title}")
+    print(f"{title}")
     print("=" * 80)
 
 
